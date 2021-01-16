@@ -510,7 +510,7 @@ impl<'de> Deserialize<'de> for ChatClickEvent {
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, <A as MapAccess<'de>>::Error> where
                 A: MapAccess<'de>
             {
-                let (action, value) = read_event(&mut map)?;
+                let (action, value) = read_event(&mut map, EventType::Click)?;
 
                 use ChatClickEvent::*;
                 match action {
@@ -589,7 +589,7 @@ impl<'de> Deserialize<'de> for ChatHoverEvent {
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, <A as MapAccess<'de>>::Error> where
                 A: MapAccess<'de>
             {
-                let (action, value) = read_event(&mut map)?;
+                let (action, value) = read_event(&mut map, EventType::Hover)?;
 
                 use ChatHoverEvent::*;
                 match action {
@@ -990,8 +990,15 @@ impl TestRandom for Chat {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub enum EventType {
+    Click,
+    Hover,
+}
+
 fn read_event<'de, A>(
     access: &mut A,
+    ty: EventType,
 ) -> Result<(&'de str, Value), <A as MapAccess<'de>>::Error>
     where A: MapAccess<'de>
 {
@@ -1010,6 +1017,12 @@ fn read_event<'de, A>(
                     value = access.next_value()?;
                     if value.is_none() {
                         return Err(A::Error::custom("none for value key=value"));
+                    }
+                },
+                "contents" if ty == EventType::Hover => {
+                    value = access.next_value()?;
+                    if value.is_none() {
+                        return Err(A::Error::custom("none for compound key=contents"));
                     }
                 },
                 other => {
